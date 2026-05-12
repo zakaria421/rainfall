@@ -1,1 +1,60 @@
-TODO: Document the step-by-step exploitation process, commands, and reasoning.
+- gdb -q ./level7
+- set disassembly-flavor intel
+- b *0x80485bd
+- set args Aa0Aa1Aa2Aa3Aa4Aa5Aa6Aa7Aa8Aa9Ab0Ab1Ab2Ab3Ab4Ab5Ab6Ab7Ab8Ab9Ac0Ac1Ac2A BBBB
+- run
+- x/wx $esp
+0xbffff6d0:     0x37614136
+
+using 0x37614136 we found that the offset is `20`
+
+(gdb) p m
+$1 = {<text variable, no debug info>} 0x80484f4 <m>
+
+08048400 <puts@plt>:
+ 8048400:	ff 25 28 99 04 08    	jmp    *0x8049928
+ 8048406:	68 28 00 00 00       	push   $0x28
+ 804840b:	e9 90 ff ff ff       	jmp    80483a0 <.plt>
+
+## Solution logic:
+
+- arg1 = padding + address of puts@GOT
+- arg2 = address of m
+
+
++ Set second->str to the GOT entry of puts.
++ Then use the second argument to write the address of m into that GOT entry.
++ When puts("~~") runs, it jumps to m, which prints the secret from g_buffer.
+
+--------------------------------------------------------------------
+
+1) Two heap “objects” are created
+
+first struct (8 bytes): { id, str }
+first->str points to an 8‑byte buffer
+second struct (8 bytes): { id, str }
+second->str points to another 8‑byte buffer
+2) First strcpy overflows
+
+If argv[1] is longer than 8 bytes, it keeps writing past:
+
+past first->str’s buffer
+into heap metadata
+into the second struct
+eventually overwriting second->str (a pointer)
+3) Second strcpy uses the corrupted pointer
+
+Now second->str is whatever 4 bytes you wrote in step 2.
+So strcpy tries to write argv[2] to that address.
+
+Why your crash address doesn’t look like the pattern
+
+The crash comes from dereferencing a fake pointer, not from EIP overwrite.
+That pointer value is built from 4 bytes inside your pattern, but:
+little‑endian reverses it (so it doesn’t “look” like the pattern)
+a \x00 inside the pattern can truncate it
+it might only be partially overwritten
+In short
+You’re not smashing EIP. You’re smashing a heap pointer, and the crash address is that bad pointer, not a clean pattern chunk.
+
+If you want, I can diagram the exact heap layout and show where the 20‑byte offset comes from.

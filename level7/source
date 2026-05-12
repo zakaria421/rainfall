@@ -1,53 +1,46 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+ #include <time.h>
 
-/* Buffer at 0x8049960, size 0x44 (68 bytes) — used for fgets and printf */
-char buf[68];
+ typedef struct s_entry {
+ 	int id;
+ 	char *str;
+ } t_entry;
 
-/* Function 'm' at 0x80484f4:
- * Prints the contents of buf along with the current time,
- * using format string at 0x80486e0. */
-void m(void) {
-    printf(/* fmt @ 0x80486e0 */ "%s - %d\n", buf, (int)time(NULL));
-}
+ static char g_buffer[0x44];
 
-/* Structure inferred from malloc pattern:
- *   struct node {
- *       int   type;       // offset 0
- *       char *data;       // offset 4  (points to a separately malloc'd 8-byte block)
- *   };
- */
-struct node {
-    int   type;
-    char *data;
-};
+ static const char g_format[] = "%s - %d\n";
+ static const char g_path[] = "/home/user/level8/.pass";
+ static const char g_mode[] = "r";
+ static const char g_done[] = "~~";
 
-int main(int argc, char *argv[]) {
-    /* Allocate first node, set type = 1 */
-    struct node *a = malloc(sizeof(struct node));
-    a->type = 1;
-    a->data = malloc(8);
+ static void m(void) {
+ 	printf(g_format, g_buffer, (int)time(NULL));
+ }
 
-    /* Allocate second node, set type = 2 */
-    struct node *b = malloc(sizeof(struct node));
-    b->type = 2;
-    b->data = malloc(8);
+ int main(int argc, char **argv) {
+ 	t_entry *first;
+ 	t_entry *second;
+ 	FILE *file;
 
-    /* strcpy(a->data, argv[1]) */
-    strcpy(a->data, argv[1]);
+ 	if (argc < 3) {
+ 		return 0;
+ 	}
 
-    /* strcpy(b->data, argv[2]) */
-    strcpy(b->data, argv[2]);
+ 	first = (t_entry *)malloc(8);
+ 	first->id = 1;
+ 	first->str = (char *)malloc(8);
 
-    /* Open the password file and read into buf */
-    FILE *fp = fopen(/* "r" @ 0x80486e9 */ "/home/user/level8/.pass",
-                     /* mode @ 0x80486eb */ "r");
-    fgets(buf, 68, fp);
+ 	second = (t_entry *)malloc(8);
+ 	second->id = 2;
+ 	second->str = (char *)malloc(8);
 
-    /* Print a static string (address 0x8048703) */
-    puts("~~");
+ 	strcpy(first->str, argv[1]);
+ 	strcpy(second->str, argv[2]);
 
-    return 0;
-}
+ 	file = fopen(g_path, g_mode);
+ 	fgets(g_buffer, sizeof(g_buffer), file);
+ 	puts(g_done);
+ 	return 0;
+ }
