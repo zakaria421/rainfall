@@ -1,0 +1,24 @@
+// Reconstructed logic for the level6 binary.
+// High-level, human-readable equivalent of the observed assembly.
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static void n(void) {
+	system("/bin/cat /home/user/level7/.pass");
+}
+
+static void m(void) {
+	puts("Nope");
+}
+
+int main(int argc, char **argv) {
+	char *buf = malloc(0x40);
+	void (**fn)(void) = malloc(4);
+
+	*fn = m;
+	strcpy(buf, argv[1]);
+	(*fn)();
+	return 0;
+}

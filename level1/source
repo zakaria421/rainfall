@@ -1,0 +1,19 @@
+// Reconstructed logic for the level1 binary.
+// High-level, human-readable equivalent of the observed assembly.
+
+#include <stdio.h>
+#include <stdlib.h>
+
+static void run(void) {
+	fwrite("Good... Wait what?\n", 1, 0x13, stdout);
+	system("/bin/sh");
+}
+
+int main(void) {
+	char buf[64];
+	// gets() allows overflow of the stack buffer.
+	gets(buf);
+	return 0;
+}
+
+

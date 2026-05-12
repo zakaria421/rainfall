@@ -1,0 +1,15 @@
+Goal: spawn a shell as level1 and read the next password.
+
+Observation:
+- The binary parses argv[1] with atoi and compares it to 0x1a7 (decimal 423).
+- On success it sets effective IDs and execs /bin/sh.
+- Otherwise it prints "No !".
+
+Steps:
+1) Run the binary with the expected numeric input:
+	/home/user/level0/level0 423
+2) In the spawned shell, read the next level password:
+	cat /home/user/level1/.pass
+
+Result:
+- The command prints the level1 password, which is stored in the flag file.

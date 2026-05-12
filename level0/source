@@ -1,0 +1,27 @@
+// Reconstructed logic for the level0 binary.
+// This is a high-level, human-readable equivalent of the observed assembly.
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+int main(int argc, char **argv) {
+	if (argc < 2) {
+		fwrite("No !\n", 1, 5, stderr);
+		return 0;
+	}
+
+	if (atoi(argv[1]) == 0x1a7) {
+		// Keep effective IDs for the setuid binary, then spawn a shell.
+		gid_t egid = getegid();
+		uid_t euid = geteuid();
+		setresgid(egid, egid, egid);
+		setresuid(euid, euid, euid);
+		char *args[] = {"/bin/sh", NULL};
+		execv("/bin/sh", args);
+		return 0;
+	}
+
+	fwrite("No !\n", 1, 5, stderr);
+	return 0;
+}
