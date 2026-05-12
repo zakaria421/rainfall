@@ -1,1 +1,36 @@
-TODO: Document the step-by-step exploitation process, commands, and reasoning.
+Level8 walkthrough
+
+Program flow
+- The program loops forever and prints two pointers with printf("%p, %p ", g_service, g_auth).
+- It reads a line with fgets into a 0x80-byte buffer.
+- It checks the start of the line against four commands:
+	- "auth ": allocate 4 bytes for g_auth, zero them, then copy the text after "auth " into g_auth if the length is <= 0x1e.
+	- "reset": free(g_auth).
+	- "service": g_service = strdup(input + 7).
+	- "login": if *(int *)(g_auth + 0x20) is non-zero, system("/bin/sh"); otherwise print "Password:".
+
+What *(int *)(g_auth + 0x20) means
+- g_auth is a char*.
+- g_auth + 0x20 moves 32 bytes forward.
+- (int *) casts that address to an int*.
+- *(int *) dereferences and reads the 4-byte integer at that address.
+
+Why it is exploitable
+- g_auth only points to a 4-byte allocation, but strcpy can copy up to 30 bytes into it.
+- This overflows into adjacent heap memory.
+- The login check reads 4 bytes at offset 0x20 from g_auth, so an overflow can make this value non-zero.
+
+Why g_auth + 0x20 often lands in g_service
+- It is not guaranteed by C, but it often happens with glibc’s heap layout.
+- The next heap chunk frequently sits right after the tiny g_auth chunk.
+- If the next chunk is the "service" buffer, the read at g_auth + 0x20 falls inside that buffer and sees non-zero data.
+
+Example input sequence
+auth A
+service AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+login
+
+$ cat /home/user/level9/.pass
+c542e581c5ba5162a85f767996e3247ed619ef6c6f7b76a59435545dc6259f8a
+
+This usually makes the login check pass because the service buffer fills the bytes read at g_auth + 0x20.

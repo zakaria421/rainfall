@@ -1,1 +1,55 @@
-TODO: Describe the exploited binary in a human-readable form.
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static const char kPromptFormat[] = "%p, %p ";
+static const char kCmdAuth[] = "auth ";
+static const char kCmdReset[] = "reset";
+static const char kCmdService[] = "service";
+static const char kCmdLogin[] = "login";
+static const char kShell[] = "/bin/sh";
+static const char kPasswordPrompt[] = "Password:";
+
+static char *g_service;
+static char *g_auth;
+
+int main(void) {
+	char input[0x80];
+
+	while (1) {
+		printf(kPromptFormat, g_service, g_auth);
+
+		if (fgets(input, sizeof(input), stdin) == NULL) {
+			break;
+		}
+
+		if (strncmp(input, kCmdAuth, 5) == 0) {
+			g_auth = malloc(4);
+			if (g_auth != NULL) {
+				*(int *)g_auth = 0;
+
+				if (strlen(input + 5) <= 0x1e) { // 30
+					strcpy(g_auth, input + 5);
+				}
+			}
+		}
+
+		if (strncmp(input, kCmdReset, 5) == 0) {
+			free(g_auth);
+		}
+
+		if (strncmp(input, kCmdService, 6) == 0) {
+			g_service = strdup(input + 7);
+		}
+
+		if (strncmp(input, kCmdLogin, 5) == 0) {
+			if (g_auth != NULL && *(int *)(g_auth + 0x20) != 0) { // 32
+				system(kShell);
+			} else {
+				fwrite(kPasswordPrompt, 1, 10, stdout);
+			}
+		}
+	}
+
+	return 0;
+}
