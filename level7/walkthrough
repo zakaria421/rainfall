@@ -57,4 +57,3 @@ it might only be partially overwritten
 In short
 You’re not smashing EIP. You’re smashing a heap pointer, and the crash address is that bad pointer, not a clean pattern chunk.
 
-If you want, I can diagram the exact heap layout and show where the 20‑byte offset comes from.
