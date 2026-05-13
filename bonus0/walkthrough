@@ -1,1 +1,12 @@
-TODO: Document the step-by-step exploitation process, commands, and reasoning.
+Starting program: /home/user/bonus0/bonus0 
+ - 
+121231213132131321321231
+ - 
+Aa0Aa1Aa2Aa3Aa4Aa5Aa
+12123121313213132132Aa0Aa1Aa2Aa3Aa4Aa5Aa��� Aa0Aa1Aa2Aa3Aa4Aa5Aa���
+
+Program received signal SIGSEGV, Segmentation fault.
+0x41336141 in ?? ()
+
+EIP offset is at `9`
+
