@@ -3,23 +3,20 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 int main(int argc, char **argv) {
-	if (argc < 2) {
-		fwrite("No !\n", 1, 5, stderr);
-		return 0;
-	}
+	(void)argc;
 
 	if (atoi(argv[1]) == 0x1a7) {
-		// Keep effective IDs for the setuid binary, then spawn a shell.
+		char *arg0 = strdup("/bin/sh");
+		char *args[] = {arg0, NULL};
 		gid_t egid = getegid();
 		uid_t euid = geteuid();
 		setresgid(egid, egid, egid);
 		setresuid(euid, euid, euid);
-		char *args[] = {"/bin/sh", NULL};
 		execv("/bin/sh", args);
-		return 0;
 	}
 
 	fwrite("No !\n", 1, 5, stderr);

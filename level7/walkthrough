@@ -28,32 +28,10 @@ $1 = {<text variable, no debug info>} 0x80484f4 <m>
 
 --------------------------------------------------------------------
 
-1) Two heap “objects” are created
+[ s1 (id, str) ][ s2 (id, str) ][ buffer1 (8 bytes) ][ buffer2 (8 bytes) ]
 
-first struct (8 bytes): { id, str }
-first->str points to an 8‑byte buffer
-second struct (8 bytes): { id, str }
-second->str points to another 8‑byte buffer
-2) First strcpy overflows
+The real bug is the first strcpy(s1->str, argv[1]): since s1->str only points to an 8‑byte heap buffer, any longer input spills into adjacent heap memory. In our case the next struct’s pointer s2->str. Later, the second strcpy(s2->str, argv[2]) uses that corrupted pointer, so it writes to an attacker‑chosen address.
 
-If argv[1] is longer than 8 bytes, it keeps writing past:
-
-past first->str’s buffer
-into heap metadata
-into the second struct
-eventually overwriting second->str (a pointer)
-3) Second strcpy uses the corrupted pointer
-
-Now second->str is whatever 4 bytes you wrote in step 2.
-So strcpy tries to write argv[2] to that address.
-
-Why your crash address doesn’t look like the pattern
-
-The crash comes from dereferencing a fake pointer, not from EIP overwrite.
-That pointer value is built from 4 bytes inside your pattern, but:
-little‑endian reverses it (so it doesn’t “look” like the pattern)
-a \x00 inside the pattern can truncate it
-it might only be partially overwritten
-In short
-You’re not smashing EIP. You’re smashing a heap pointer, and the crash address is that bad pointer, not a clean pattern chunk.
-
+First input overflows and overwrites second->str so it points to 0x8049928 (the puts@GOT entry).
+Second input is written via strcpy(second->str, argv[2]), so it writes into that GOT slot, replacing the function pointer with 0x80484f4 (the address of m).
+So after that, the value stored at 0x8049928 becomes 0x80484f4, and the next puts("~~") jumps to m().
