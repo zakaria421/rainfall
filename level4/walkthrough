@@ -2,7 +2,7 @@ Goal: use the format-string vulnerability to set the global flag and trigger the
 
 Observation:
 - `p()` calls `printf` with user-controlled input (format-string vulnerability).
-- `n()` checks a global at 0x8049810 against 0x01025544.
+- `n()` checks a global variable m at 0x8049810 against 0x01025544.
 - If the value matches, it runs `/bin/cat /home/user/level5/.pass`.
 
 Steps:

