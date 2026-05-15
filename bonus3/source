@@ -1,1 +1,50 @@
-TODO: Describe the exploited binary in a human-readable form.
+// Reconstructed C-like logic from bonus3.asm
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int main(int argc, char **argv)
+{
+	/* .rodata strings referenced by the binary */
+	const char *pass_path = "/home/user/end/.pass";    /* 0x80486f0 */
+	const char *pass_mode = "r";                      /* 0x80486f2 */
+	const char *sh_path = "/bin/sh";                  /* 0x804870a */
+	const char *sh_name = "sh";                       /* 0x8048707 */
+
+	FILE *fp;
+	char buffer[0x42];
+	char line[0x42];
+	int index;
+
+	fp = fopen(pass_path, pass_mode);
+	memset(buffer, 0, sizeof(buffer));
+
+	if (fp == NULL || argc != 2)
+	{
+		return -1;
+	}
+
+	/* read 0x42 bytes into buffer and add terminator */
+	fread(buffer, 1, 0x42, fp); //66
+	buffer[0x41] = '\0';
+
+	/* argv[1] parsed as int decides where to place terminator */
+	index = atoi(argv[1]);
+	buffer[index] = '\0';
+
+	/* read next 0x41 bytes into line (buffer + 0x42) */
+	fread(line, 1, 0x41, fp);
+	fclose(fp);
+
+	if (strcmp(buffer, argv[1]) == 0)
+	{
+		execl(sh_path, sh_name, (char *)0);
+	}
+	else
+	{
+		puts(line);
+	}
+
+	return 0;
+}
