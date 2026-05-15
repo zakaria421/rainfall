@@ -1,1 +1,62 @@
-TODO: Describe the exploited binary in a human-readable form.
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Global variable at 0x8049988 — language/greeting selector
+int language = 0;
+
+void greetuser(char *name) {
+    char greeting[72]; // -0x48(%ebp), 72 bytes
+
+    if (language == 1) {
+        // String at 0x8048717: "Hyvää päivää! " (Finnish)
+        strcpy(greeting, "Hyvää päivää ");
+    } else if (language == 2) {
+        // String at 0x804872a: "Goedemiddag! " (Dutch)
+        strcpy(greeting, "Goedemiddag! ");
+    } else {
+        // language == 0, string at 0x8048710: "Hello "
+        strcpy(greeting, "Hello ");
+    }
+
+    strcat(greeting, name);
+    puts(greeting);
+}
+
+int main(int argc, char **argv) {
+    char buffer[76]; // 0x50(%esp), 0x4c = 76 bytes total (0x28 + 0x20 + padding)
+    char *env;
+
+    if (argc != 3)
+        return 1;
+
+    // Zero out buffer (rep stos, 0x13 dwords = 76 bytes)
+    memset(buffer, 0, 76);
+
+    // Copy argv[1] into buffer[0..39], max 40 (0x28) bytes
+    strncpy(buffer, argv[1], 40);
+
+    // Copy argv[2] into buffer[40..71], max 32 (0x20) bytes
+    strncpy(buffer + 40, argv[2], 32);
+
+    // Check LANG environment variable at 0x8048738
+    env = getenv("LANG");
+    if (env != NULL) {
+        // Compare first 2 bytes: "fi" at 0x804873d
+        if (memcmp(env, "fi", 2) == 0) {
+            language = 1;
+        }
+        // Compare first 2 bytes: "nl" at 0x8048740
+        else if (memcmp(env, "nl", 2) == 0) {
+            language = 2;
+        }
+    }
+
+    // Copy buffer onto the stack (rep movsl, 0x13 dwords)
+    // then call greetuser with the local copy
+    greetuser(buffer);
+
+    return 0;
+}

