@@ -1,1 +1,13 @@
-TODO: Document the step-by-step exploitation process, commands, and reasoning.
+- The program reads `/home/user/end/.pass` into `buffer`.
+- It uses `atoi(argv[1])` as an index and writes `buffer[index] = '\0'`.
+- If `strcmp(buffer, argv[1]) == 0`, it spawns a shell.
+
+## Exploit idea
+
+Pass an empty string as the argument:
+
+```
+./bonus3 ""
+```
+
+`atoi("")` returns `0`, so the program writes `buffer[0] = '\0'`, making `buffer` an empty string. Since `argv[1]` is also `""`, `strcmp` succeeds and the shell is executed.
